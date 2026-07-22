@@ -1,0 +1,16 @@
+# Python
+app/.venv/
+__pycache__/
+*.pyc
+
+# dbt
+**/target/
+**/dbt_packages/
+**/logs/
+
+# secrets
+.env
+*.json
+
+# macOS
+.DS_Store
