@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: raw-pratchett
+    dataset: raw
+    tables:
+      - name: discworld_books
+      - name: bluesky_posts
+        config:
+          loaded_at_field: created_at
+          freshness:
+            warn_after: {count: 240, period: hour}
+            error_after: {count: 480, period: hour}
