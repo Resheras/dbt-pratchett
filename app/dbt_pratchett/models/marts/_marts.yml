@@ -1,0 +1,64 @@
+version: 2
+
+models:
+  - name: dim_series
+    columns:
+      - name: series_id
+        data_tests:
+          - unique
+          - not_null
+      - name: series_name
+        data_tests:
+          - unique
+          - not_null
+          - accepted_values:
+              values: ['Rincewind', 'Witches', 'City Watch', 'Death',
+                       'Tiffany Aching', 'Moist von Lipwig',
+                       'Industrial Revolution', 'Unseen University', 'Stand-alone']
+  - name: dim_books
+    columns:
+      - name: book_id
+        data_tests:
+          - unique
+          - not_null
+      - name: order_of_release
+        data_tests:
+          - unique
+          - not_null
+      - name: book_name
+        data_tests:
+          - unique
+          - not_null
+  - name: fct_bluesky_posts
+    columns:
+      - name: post_uri
+        data_tests:
+          - unique
+          - not_null
+      - name: created_at
+        data_tests:
+          - not_null
+      - name: books_match_count
+        data_tests:
+          - not_null
+      - name: series_match_count
+        data_tests:
+          - not_null
+  - name: bridge_book_series
+    columns:
+      - name: book_series_id
+        data_tests:
+          - unique
+          - not_null
+      - name: book_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_books') 
+              field: book_id
+      - name: series_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_series') 
+              field: series_id
