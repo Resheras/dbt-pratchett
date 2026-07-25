@@ -1,0 +1,36 @@
+version: 2
+
+macros:
+  - name: clean_whitespace
+    description: >
+      Collapses runs of whitespace to single spaces and trims the ends of a text
+      column. Generic — reusable on any free-text field. Used on book titles,
+      series strings, comments, and post text across the staging models.
+    arguments:
+      - name: column_name
+        type: string
+        description: The column (or SQL expression) to clean.
+
+  - name: strip_footnotes
+    description: >
+      Removes Wikipedia-style bracketed footnote markers (e.g. "[7]") from text.
+      Narrower than clean_whitespace and applied only to the books `comment`
+      field, since footnote markers are a scrape artifact specific to that source.
+    arguments:
+      - name: column_name
+        type: string
+        description: The column (or SQL expression) to strip footnote markers from.
+
+  - name: incremental_lookback
+    description: >
+      Returns a look-back cutoff timestamp for incremental models — the max value
+      already loaded, minus a trailing window of N days. Used in fct_bluesky_posts
+      so out-of-order posts aren't skipped forever by a strict "> max" cutoff.
+      Written once so a second incremental model could reuse it.
+    arguments:
+      - name: column_name
+        type: string
+        description: The timestamp column to take the max of (e.g. created_at).
+      - name: days
+        type: integer
+        description: Size of the trailing look-back window in days. Defaults to 3.
