@@ -1,0 +1,16 @@
+version: 2
+
+data_tests:
+  - name: assert_no_negative_match_counts
+    description: >
+      Asserts fct_bluesky_posts never has a negative books_match_count or
+      series_match_count. Both are COUNT(...) values coalesced to 0, so a negative
+      is structurally impossible today — this guards against a future refactor
+      (e.g. introducing subtraction) silently breaking that invariant.
+
+  - name: assert_fct_matches_staging_rowcount
+    description: >
+      Reconciles the fact against its source: count(*) of fct_bluesky_posts must
+      equal count(distinct post_uri) of stg_bluesky_posts. A returned row means the
+      fact dropped or duplicated posts relative to staging — a fan-out or filter
+      regression.

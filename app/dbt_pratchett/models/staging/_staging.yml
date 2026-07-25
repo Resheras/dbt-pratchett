@@ -1,0 +1,39 @@
+version: 2
+
+models:
+  - name: stg_books
+    description: >
+      One row per Discworld novel (41 total), cleaned from the raw CSV.
+      Splits the raw positional columns into named fields, forward-fills
+      missing publication years, and trims whitespace/footnotes.
+    columns:
+      - name: order_of_release
+        description: Publication sequence number (1-41). Natural key for a book.
+      - name: name
+        description: Book title, whitespace-cleaned.
+      - name: year
+        description: "{{ doc('year_forward_fill') }}"
+      - name: year_inferred
+        description: TRUE when year was not present in the source row and was carried forward from the previous book.
+      - name: series
+        description: Raw compound series string (e.g. "Tiffany Aching (Witches)"). Tokenized downstream in int_book_series.
+      - name: comment
+        description: Free-text note from the source, whitespace-cleaned and with footnote markers stripped.
+
+  - name: stg_bluesky_posts
+    description: >
+      One row per unique Bluesky post mentioning Discworld/Pratchett,
+      deduplicated on post_uri (keeps the earliest by created_at).
+    columns:
+      - name: post_uri
+        description: AT Protocol URI of the post. Primary key.
+      - name: author_did
+        description: Author's decentralized identifier (DID) — stable even if the handle changes.
+      - name: author_handle
+        description: Author's Bluesky handle at fetch time (may change over time).
+      - name: text
+        description: Post body text, whitespace-cleaned.
+      - name: created_at
+        description: Timestamp the post was created, per Bluesky.
+      - name: permalink
+        description: Web URL to view the post.

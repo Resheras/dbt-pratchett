@@ -1,0 +1,37 @@
+version: 2
+
+models:
+  - name: int_book_series
+    description: >
+      Bridges books to series at the tag level: one row per (book, series tag).
+      The raw `series` string is a compound value that can pack several tags
+      together with `/` and parentheses (e.g. "Unseen University (Rincewind) / Industrial Revolution").
+      This model splits those into separate rows of atomic tags.
+
+      Known limitation (deliberate): the split is FLAT — all tags for a book are
+      treated as equal and unordered. The parenthetical form is NOT preserved as a
+      primary-vs-secondary or parent-vs-child distinction, because the source nesting
+      direction is inconsistent (e.g. "Rincewind (Unseen University)" vs.
+      "Unseen University (Rincewind)" — same two tags, opposite order), so it can't be
+      trusted as a real hierarchy. Modeling a parent_series_id was rejected for that reason.
+    columns:
+      - name: order_of_release
+        description: Book this series tag belongs to (joins to stg_books / dim_books).
+      - name: series
+        description: A single atomic series tag, trimmed. One of the 9 known Discworld series.
+
+  - name: int_bluesky_post_book_matches
+    description: "One row per (post, book) match. {{ doc('post_matching') }}"
+    columns:
+      - name: post_uri
+        description: The Bluesky post that mentioned a book (joins to stg_bluesky_posts).
+      - name: order_of_release
+        description: The matched book (joins to stg_books / dim_books).
+
+  - name: int_bluesky_post_series_matches
+    description: "One row per (post, series) match. {{ doc('post_matching') }}"
+    columns:
+      - name: post_uri
+        description: The Bluesky post that mentioned a series (joins to stg_bluesky_posts).
+      - name: series
+        description: The matched series name.

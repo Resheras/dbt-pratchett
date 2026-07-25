@@ -2,12 +2,51 @@ version: 2
 
 sources:
   - name: raw-pratchett
+    description: >
+      Landing zone (BigQuery `raw` dataset) for the two source feeds, loaded outside
+      dbt: the Discworld book list (one-off CSV load) and live Bluesky posts mentioning
+      Discworld/Pratchett (appended by the ingestion script).
     dataset: raw
     tables:
       - name: discworld_books
+        description: >
+          Raw Discworld novel list, loaded from a source CSV via `bq load` with
+          positional headerless columns (column_1..column_5). Sourced from
+          [Kaggle: Discworld list](https://www.kaggle.com/datasets/weronika3piotrowska/discworld-list).
+          The columns are cleaned, renamed, and de-shifted in stg_books — note the
+          source has a year/series column shift on rows where the year is blank,
+          which stg_books corrects.
+        columns:
+          - name: column_1
+            description: Publication order (becomes order_of_release).
+          - name: column_2
+            description: Book title (becomes name).
+          - name: column_3
+            description: Publication year — or, when blank, the value shifts and this holds the series (de-shifted in staging).
+          - name: column_4
+            description: Series string, or comment when the year column shifted.
+          - name: column_5
+            description: Comment/notes, present only on rows where the year was populated.
       - name: bluesky_posts
+        description: >
+          Append-only feed of Bluesky posts mentioning Discworld/Pratchett, fetched via
+          the AT Protocol by app/ingestion/fetch_bluesky_posts.py. Deduplicated downstream
+          in stg_bluesky_posts (one row per post_uri).
         config:
           loaded_at_field: created_at
           freshness:
             warn_after: {count: 240, period: hour}
             error_after: {count: 480, period: hour}
+        columns:
+          - name: post_uri
+            description: AT Protocol URI of the post (natural key; may arrive duplicated across fetches).
+          - name: author_did
+            description: Author's decentralized identifier (DID).
+          - name: author_handle
+            description: Author's Bluesky handle at fetch time.
+          - name: text
+            description: Raw post body text.
+          - name: created_at
+            description: Post creation timestamp; also the freshness `loaded_at_field`.
+          - name: permalink
+            description: Web URL to view the post.

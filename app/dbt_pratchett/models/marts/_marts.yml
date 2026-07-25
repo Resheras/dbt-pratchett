@@ -2,63 +2,108 @@ version: 2
 
 models:
   - name: dim_series
+    description: One row per Discworld series (9 total). Series dimension.
     columns:
       - name: series_id
+        description: Surrogate key, hashed from series_name. Primary key.
         data_tests:
           - unique
           - not_null
       - name: series_name
+        description: Name of the series. One of the 9 known Discworld series.
         data_tests:
           - unique
           - not_null
           - accepted_values:
-              values: ['Rincewind', 'Witches', 'City Watch', 'Death',
-                       'Tiffany Aching', 'Moist von Lipwig',
-                       'Industrial Revolution', 'Unseen University', 'Stand-alone']
+              arguments:
+                values: ['Rincewind', 'Witches', 'City Watch', 'Death',
+                        'Tiffany Aching', 'Moist von Lipwig',
+                        'Industrial Revolution', 'Unseen University', 'Stand-alone']
+
   - name: dim_books
+    description: One row per Discworld novel (41 total). Book dimension.
     columns:
       - name: book_id
+        description: Surrogate key, hashed from order_of
         data_tests:
           - unique
           - not_null
       - name: order_of_release
+        description: Publication sequence number (1-41). Natural key from the source.
         data_tests:
           - unique
           - not_null
       - name: book_name
+        description: Book title.
         data_tests:
           - unique
           - not_null
+      - name: published_year
+        description: "{{ doc('year_forward_fill') }}"
+        data_tests:
+          - not_null
+      - name: year_inferred
+        description: TRUE when the year was absent in the source and carried forward from the previous book.
+        data_tests:
+          - not_null
+      - name: comment
+        description: Free-text note from the source, cleaned of whitespace and footnote markers.
+
   - name: fct_bluesky_posts
+    description: >
+      One row per Bluesky post (post grain, unmatched posts included). Carries
+      rolled-up counts of how many books and series each post mentions.
+      {{ doc('incremental_merge_strategy') }}
     columns:
       - name: post_uri
+        description: AT Protocol URI of the post. Primary key.
         data_tests:
           - unique
           - not_null
+      - name: author_did
+        description: Author's decentralized identifier (DID) — stable across handle changes.
+      - name: author_handle
+        description: Author's Bluesky handle at fetch ti
+      - name: text
+        description: Post body text, whitespace-cleaned.
       - name: created_at
+        description: Timestamp the post was created. Table is partitioned on this (day granularity).
         data_tests:
           - not_null
+      - name: permalink
+        description: Web URL to view the post.
       - name: books_match_count
+        description: Number of distinct books this post
         data_tests:
           - not_null
       - name: series_match_count
+        description: Number of distinct series this post
         data_tests:
           - not_null
+
   - name: bridge_book_series
+    description: >
+      Many-to-many bridge between books and series (one row per book-series pairing).
+      Resolves the flat tags from int_book_series into surrogate keys.
     columns:
       - name: book_series_id
+        description: Surrogate key, hashed from (book_id, series_id). Primary key.
         data_tests:
           - unique
           - not_null
       - name: book_id
+        description: The book in this pairing.
         data_tests:
           - not_null
           - relationships:
-              to: ref('dim_books') 
-              field: book_id
+              arguments:
+                to: ref('dim_books')
+                field: book_id
       - name: series_id
+        description: The series in this pairing.
         data_tests:
           - not_null
           - relationships:
-              to: ref('dim_series') 
-              field: series_id
+              arguments:
+                to: ref('dim_series')
+                field: series_id
