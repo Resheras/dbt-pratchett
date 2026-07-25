@@ -24,7 +24,7 @@ models:
     description: One row per Discworld novel (41 total). Book dimension.
     columns:
       - name: book_id
-        description: Surrogate key, hashed from order_of
+        description: Surrogate key, hashed from order_of_release. Primary key.
         data_tests:
           - unique
           - not_null
@@ -63,7 +63,7 @@ models:
       - name: author_did
         description: Author's decentralized identifier (DID) — stable across handle changes.
       - name: author_handle
-        description: Author's Bluesky handle at fetch ti
+        description: Author's Bluesky handle at fetch time.
       - name: text
         description: Post body text, whitespace-cleaned.
       - name: created_at
@@ -73,11 +73,11 @@ models:
       - name: permalink
         description: Web URL to view the post.
       - name: books_match_count
-        description: Number of distinct books this post
+        description: Number of distinct books this post mentions (0 if none).
         data_tests:
           - not_null
       - name: series_match_count
-        description: Number of distinct series this post
+        description: Number of distinct series this post mentions (0 if none).
         data_tests:
           - not_null
 
