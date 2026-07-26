@@ -1,0 +1,63 @@
+name: CI
+
+# Runs on every pull request targeting main. Combined with branch
+# protection (CI must be green), this turns the PR flow into a real gate.
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  dbt-build:
+    runs-on: ubuntu-latest
+    env:
+      # Point dbt (and MetricFlow) at the CI-only profile in this repo,
+      # not at ~/.dbt. This isolates CI config from local dev entirely.
+      DBT_PROFILES_DIR: ${{ github.workspace }}/.github/dbt
+      # A fresh, PR-scoped dataset. Dropped again at the end of the run.
+      DBT_CI_DATASET: dbt_ci_pr_${{ github.event.pull_request.number }}
+      # Where the service-account key gets written; read by both dbt
+      # (via keyfile in the CI profile) and any google-cloud client (ADC).
+      GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
+    defaults:
+      run:
+        working-directory: app/dbt_pratchett
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+
+      - name: Install dependencies
+        working-directory: app
+        run: pip install -r requirements.txt
+
+      - name: Write service-account key
+        # printf (not echo) + env var (not inline) avoids quoting/newline
+        # issues and keeps the secret off the command line.
+        env:
+          BIGQUERY_SA_KEY: ${{ secrets.BIGQUERY_SA_KEY }}
+        run: printf '%s' "$BIGQUERY_SA_KEY" > "$GOOGLE_APPLICATION_CREDENTIALS"
+
+      - name: Install dbt packages
+        run: dbt deps
+
+      - name: Build + test everything
+        # `dbt build` runs models AND their tests in dependency order,
+        # failing the job (red PR) on any model error or failing test.
+        run: dbt build
+
+      - name: Validate the semantic layer
+        # Parses the MetricFlow semantic models/metrics and validates them
+        # against the warehouse. Optional — remove this step if it's noisy.
+        run: mf validate-configs
+
+      - name: Drop the CI dataset
+        # Always runs (even if the build failed) so BigQuery storage
+        # doesn't accumulate a dataset per PR. Uses the same ADC key.
+        if: always()
+        run: |
+          python -c "from google.cloud import bigquery; bigquery.Client(project='dbt-pratchett').delete_dataset('$DBT_CI_DATASET', delete_contents=True, not_found_ok=True)"
