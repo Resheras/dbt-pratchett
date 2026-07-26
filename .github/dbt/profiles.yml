@@ -1,0 +1,21 @@
+# CI-only dbt profile. Never used locally — the workflows point
+# DBT_PROFILES_DIR here so it overrides ~/.dbt/profiles.yml only inside CI.
+# Contains NO secrets: auth + the target dataset are read from env vars
+# that the workflow populates from GitHub Actions Secrets.
+dbt_pratchett:
+  target: ci
+  outputs:
+    ci:
+      type: bigquery
+      method: service-account
+      project: dbt-pratchett
+      location: US
+      # Dataset is unique per pull request (set in ci.yml) so concurrent
+      # PRs never collide with each other or with local dev (dbt_ana).
+      dataset: "{{ env_var('DBT_CI_DATASET') }}"
+      # Path to the service-account key file the workflow writes from a secret.
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+      threads: 4
+      job_execution_timeout_seconds: 300
+      job_retries: 1
+      priority: interactive
