@@ -1,0 +1,137 @@
+semantic_models:
+  - name: bluesky_posts
+    description: "One row per Bluesky post; source for post-volume and match-rate metrics."
+    model: ref('fct_bluesky_posts')
+
+    defaults:
+      agg_time_dimension: created_at         
+
+    entities:
+      - name: post
+        type: primary
+        expr: post_uri
+
+    dimensions:
+      - name: created_at
+        type: time
+        type_params:
+          time_granularity: day
+
+    measures:
+      - name: post_count
+        description: "Count of all Bluesky posts."
+        agg: count
+        expr: post_uri
+      - name: matched_post_count
+        description: "Posts matched to at least one book or series."
+        agg: sum
+        expr: "case when books_match_count > 0 or series_match_count > 0 then 1 else 0 end"
+
+  - name: post_book_matches
+    description: "One row per (post, book) match; powers posts-per-book."
+    model: ref('int_bluesky_post_book_matches')
+    primary_entity: post_book_match
+    defaults:
+      agg_time_dimension: placeholder_date
+    entities:
+      - name: post
+        type: foreign
+        expr: post_uri
+      - name: book
+        type: foreign
+        expr: order_of_release
+    dimensions:
+      - name: placeholder_date
+        type: time
+        expr: "CURRENT_DATE()"
+        type_params:
+          time_granularity: day
+    measures:
+      - name: book_match_count
+        description: "Number of post-book matches."
+        agg: count
+        expr: post_uri
+
+  - name: books
+    description: "One row per Discworld novel; supplies book labels."
+    model: ref('dim_books')
+    entities:
+      - name: book
+        type: primary
+        expr: order_of_release
+    dimensions:
+      - name: book_name
+        type: categorical
+
+  - name: post_series_matches
+    description: "One row per (post, series) match; powers posts-per-series."
+    model: ref('int_bluesky_post_series_matches')
+    primary_entity: post_series_match
+    defaults:
+      agg_time_dimension: placeholder_date
+    entities:
+      - name: post
+        type: foreign
+        expr: post_uri
+      - name: series
+        type: foreign
+        expr: series
+    dimensions:
+      - name: placeholder_date
+        type: time
+        expr: "CURRENT_DATE()"
+        type_params:
+          time_granularity: day
+    measures:
+      - name: series_match_count
+        description: "Number of post-series matches."
+        agg: count
+        expr: post_uri
+
+  - name: series
+    description: "One row per Discworld series tag; supplies series labels."
+    model: ref('dim_series')
+    entities:
+      - name: series
+        type: primary
+        expr: series_name
+    dimensions:
+      - name: series_name
+        type: categorical
+
+metrics:
+  - name: total_posts
+    description: "Total number of Bluesky posts."
+    label: "Total posts"
+    type: simple
+    type_params:
+      measure: post_count
+
+  - name: matched_posts
+    description: "Posts matched to at least one book or series."
+    label: "Matched posts"
+    type: simple
+    type_params:
+      measure: matched_post_count
+
+  - name: match_rate
+    description: "Share of posts matched to a book or series (coverage signal)."
+    label: "Match rate"
+    type: ratio
+    type_params:
+      numerator: matched_posts
+      denominator: total_posts
+
+  - name: posts_per_book
+    description: "Posts mentioning each book (group by book to break down)."
+    label: "Posts per book"
+    type: simple
+    type_params:
+      measure: book_match_count
+
+  - name: posts_per_series
+    description: "Posts mentioning each series (group by series to break down)."
+    label: "Posts per series"
+    type: simple
+    type_params:
+      measure: series_match_count

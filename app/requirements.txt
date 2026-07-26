@@ -1,0 +1,15 @@
+# Python dependencies for the dbt Discworld project.
+# Recreate the environment with:  pip install -r requirements.txt
+# (run from app/, inside the .venv virtual environment)
+
+# --- dbt core + BigQuery adapter ---
+dbt-core==1.11.12
+dbt-bigquery==1.12.0
+
+# --- semantic layer (provides the `mf` CLI; pulls in metricflow) ---
+dbt-metricflow==0.13.0
+
+# --- Bluesky ingestion (the EL step in front of dbt) ---
+atproto==0.0.69
+google-cloud-bigquery==3.42.2
+python-dotenv==1.2.2
